@@ -1,22 +1,26 @@
 import 'dart:collection';
-
-import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 class TicTacToeNetwork {
   static Queue<dynamic>? buffer;
-  static IOWebSocketChannel? channel;
+  static WebSocketChannel? channel;
+  static bool firstMessage = true;
 
   static void setupNetwork() {
     buffer = Queue<dynamic>();
     channel =
-        IOWebSocketChannel.connect(Uri.parse('ws://fl-ttt-mini.glitch.me/ws'));
+        WebSocketChannel.connect(Uri.parse('ws://fl-ttt-mini.glitch.me/ws'));
   }
 
   // returns false if the channel is still null
   static bool startListening() {
     if (channel != null) {
       channel!.stream.listen((message) {
+        if (firstMessage == true) {
+          firstMessage = false;
+        }
         buffer!.add(message);
+        print(message);
       });
       return true;
     }
