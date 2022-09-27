@@ -1,25 +1,14 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:test_app/network.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 void main() {
-  TicTacToeNetwork.setupNetwork();
-  TicTacToeNetwork.startListening();
-  TicTacToeNetwork.sendMessage("Hello From Flutter!");
-  var timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-    if (TicTacToeNetwork.firstMessage == false) {
-      timer.cancel();
-      int player = int.parse(TicTacToeNetwork.getLastMessages().removeFirst());
-      runApp(MyApp(player: player));
-    }
-  });
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key, required this.player});
-
-  final int player;
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,25 +19,29 @@ class MyApp extends StatelessWidget {
       ),
       home: MyGamePage(
         title: 'TicTacToe',
-        localPlayer: player,
+        net: TicTacToeNetwork(
+          WebSocketChannel.connect(Uri.parse("ws://fl-ttt-mini.glitch.me/ws")),
+        ),
       ),
     );
   }
 }
 
 class MyGamePage extends StatefulWidget {
-  const MyGamePage({Key? key, required this.title, required this.localPlayer})
+  const MyGamePage({Key? key, required this.title, required this.net})
       : super(key: key);
 
   final String title;
-  final int localPlayer;
+  final TicTacToeNetwork net;
 
   @override
   State<MyGamePage> createState() => _MyGamePageState();
 }
 
 class _MyGamePageState extends State<MyGamePage> {
+  int _localPlayer = 0;
   int _turnCounter = 1;
+  int _currentUser = 1;
   bool _gameOver = false;
   final List<int> _board = List.filled(9, 0);
   final List<List<int>> _winLines = [
@@ -60,23 +53,31 @@ class _MyGamePageState extends State<MyGamePage> {
     [0, 4, 8], [2, 4, 6]
   ];
 
-  void _setBoardPositionTo(int position, int player) {
-    if (_turnCounter % 2 != player ||
-        position < 0 ||
-        position > 8 ||
-        _gameOver) {
+  void _setBoardPositionTo(int position, int player, bool shouldBuild) {
+    print(player);
+    print(_turnCounter);
+
+    if (position < 0 || position > 8 || _gameOver || _currentUser != player) {
       return;
     }
-    setState(() {
+
+    if (player == _localPlayer) {
+      widget.net.sendMessage("#PI:$player:$position");
+    }
+
+    _turnCounter++;
+
+    if (shouldBuild) {
+      setState(() {
+        _board[position] = player;
+        _checkPlayerWin(player);
+        _advanceTurn();
+      });
+    } else {
       _board[position] = player;
       _checkPlayerWin(player);
-      if (player == widget.localPlayer) {
-        TicTacToeNetwork.sendMessage("$player:$position");
-      }
-      if (!_gameOver) {
-        _turnCounter++;
-      }
-    });
+      _advanceTurn();
+    }
   }
 
   void _checkPlayerWin(int player) {
@@ -100,7 +101,16 @@ class _MyGamePageState extends State<MyGamePage> {
           textScaleFactor: 1.5,
         ),
       ),
-      body: kIsWeb ? _webBody(screen) : _mobileBody(),
+      body: StreamBuilder<dynamic>(
+        stream: widget.net.channel.stream,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const CircularProgressIndicator();
+          }
+          _handleNetworkMessage(snapshot.data);
+          return kIsWeb ? _webBody(screen) : _mobileBody();
+        },
+      ),
       bottomNavigationBar: BottomAppBar(
         color: Colors.greenAccent,
         child: Text(
@@ -122,7 +132,7 @@ class _MyGamePageState extends State<MyGamePage> {
             index: index,
             ownedBy: _board[index],
             setPosition: _setBoardPositionTo,
-            clickedBy: widget.localPlayer,
+            clickedBy: _localPlayer,
           ),
         );
       }),
@@ -143,7 +153,7 @@ class _MyGamePageState extends State<MyGamePage> {
                 index: index,
                 ownedBy: _board[index],
                 setPosition: _setBoardPositionTo,
-                clickedBy: widget.localPlayer,
+                clickedBy: _localPlayer,
               ),
             );
           }),
@@ -155,6 +165,29 @@ class _MyGamePageState extends State<MyGamePage> {
   String _showGameOverCredit() {
     int player = _turnCounter % 2;
     return "Player $player won!";
+  }
+
+  void _handleNetworkMessage(data) {
+    var res = data.toString().split(":");
+    print(res);
+    switch (res[0]) {
+      case "#UN":
+        _localPlayer = int.parse(res[1]);
+        break;
+      case "#PI":
+        int player = int.parse(res[1]);
+        int position = int.parse(res[2]);
+        _setBoardPositionTo(position, player, false);
+        break;
+    }
+  }
+
+  void _advanceTurn() {
+    if (_currentUser == 1) {
+      _currentUser == 2;
+    } else {
+      _currentUser == 1;
+    }
   }
 }
 
@@ -190,7 +223,7 @@ class TicTacToeWidget extends StatelessWidget {
       );
     } else {
       return IconButton(
-        onPressed: () => setPosition(index, clickedBy),
+        onPressed: () => setPosition(index, clickedBy, true),
         icon: const Icon(Icons.edit),
         iconSize: kIsWeb ? 200 : 100,
       );
