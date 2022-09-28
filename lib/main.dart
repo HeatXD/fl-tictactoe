@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
         title: 'TicTacToe',
         net: TicTacToeNetwork(
           WebSocketChannel.connect(
-            Uri.parse("ws://fl-ttt-mini.glitch.me/ws"),
+            Uri.parse("wss://fl-ttt-mini.glitch.me/ws"),
           ),
         ),
       ),
@@ -116,7 +116,7 @@ class _MyGamePageState extends State<MyGamePage> {
       builder: (context, snapshot) {
         _handleNetworkMessage(snapshot.data);
         var gameOverMsg = _opponentDisconnect
-            ? "Opponent disconnected\n looking for a new one"
+            ? "Opponent disconnected\nLooking for a new one."
             : "Finding a new opponent";
         return Scaffold(
           appBar: AppBar(
