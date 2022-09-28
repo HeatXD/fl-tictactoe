@@ -20,7 +20,9 @@ class MyApp extends StatelessWidget {
       home: MyGamePage(
         title: 'TicTacToe',
         net: TicTacToeNetwork(
-          WebSocketChannel.connect(Uri.parse("ws://fl-ttt-mini.glitch.me/ws")),
+          WebSocketChannel.connect(
+            Uri.parse("ws://fl-ttt-mini.glitch.me/ws"),
+          ),
         ),
       ),
     );
@@ -41,8 +43,10 @@ class MyGamePage extends StatefulWidget {
 class _MyGamePageState extends State<MyGamePage> {
   int _localPlayer = 0;
   int _turnCounter = 1;
-  int _currentUser = 1;
+  bool _justPlaced = true;
   bool _gameOver = false;
+  String _lastNetMsg = "";
+  bool _opponentDisconnect = false;
   final List<int> _board = List.filled(9, 0);
   final List<List<int>> _winLines = [
     // rows
@@ -54,37 +58,51 @@ class _MyGamePageState extends State<MyGamePage> {
   ];
 
   void _setBoardPositionTo(int position, int player, bool shouldBuild) {
-    print(player);
-    print(_turnCounter);
-
-    if (position < 0 || position > 8 || _gameOver || _currentUser != player) {
+    if (position < 0 ||
+        position > 8 ||
+        _gameOver ||
+        (_localPlayer == player && _justPlaced)) {
       return;
     }
 
     if (player == _localPlayer) {
       widget.net.sendMessage("#PI:$player:$position");
+      _justPlaced = true;
+    } else {
+      _justPlaced = false;
     }
-
-    _turnCounter++;
 
     if (shouldBuild) {
       setState(() {
         _board[position] = player;
         _checkPlayerWin(player);
-        _advanceTurn();
+        if (!_gameOver) _turnCounter++;
       });
     } else {
       _board[position] = player;
       _checkPlayerWin(player);
-      _advanceTurn();
+      if (!_gameOver) _turnCounter++;
+    }
+    // stalemate
+    if (_turnCounter == 10) {
+      _gameOver = true;
+      Future.delayed(
+        const Duration(seconds: 5),
+        () => widget.net.sendMessage("#RQ"),
+      );
     }
   }
 
   void _checkPlayerWin(int player) {
     for (var win in _winLines) {
-      int sum = _board[win[0]] + _board[win[1]] + _board[win[2]];
-      if (sum == player * 3) {
+      if (_board[win[0]] == player &&
+          _board[win[1]] == player &&
+          _board[win[2]] == player) {
         _gameOver = true;
+        Future.delayed(
+          const Duration(seconds: 5),
+          () => widget.net.sendMessage("#RQ"),
+        );
         break;
       }
     }
@@ -93,32 +111,58 @@ class _MyGamePageState extends State<MyGamePage> {
   @override
   Widget build(BuildContext context) {
     var screen = MediaQuery.of(context).size;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.title,
-          textAlign: TextAlign.center,
-          textScaleFactor: 1.5,
-        ),
-      ),
-      body: StreamBuilder<dynamic>(
-        stream: widget.net.channel.stream,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const CircularProgressIndicator();
-          }
-          _handleNetworkMessage(snapshot.data);
-          return kIsWeb ? _webBody(screen) : _mobileBody();
-        },
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.greenAccent,
-        child: Text(
-          _gameOver ? _showGameOverCredit() : "Turn: $_turnCounter",
-          textAlign: TextAlign.center,
-          textScaleFactor: 2,
-        ),
-      ),
+    return StreamBuilder<dynamic>(
+      stream: widget.net.channel.stream,
+      builder: (context, snapshot) {
+        _handleNetworkMessage(snapshot.data);
+        var gameOverMsg = _opponentDisconnect
+            ? "Opponent disconnected looking for a new one"
+            : "Finding a new opponent";
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              widget.title,
+              textAlign: TextAlign.center,
+              textScaleFactor: 1.5,
+            ),
+          ),
+          body: !snapshot.hasData || _gameOver
+              ? Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(
+                        _gameOver
+                            ? "Game Over!\n$gameOverMsg"
+                            : "Looking for an opponent!",
+                        textScaleFactor: 4,
+                      ),
+                      SizedBox(
+                        height: screen.height / 2,
+                        width: screen.width * 0.8,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 20,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : (kIsWeb ? _webBody(screen) : _mobileBody()),
+          bottomNavigationBar: BottomAppBar(
+            color: Colors.greenAccent,
+            child: Text(
+              _gameOver
+                  ? _showGameOverCredit()
+                  : (_justPlaced
+                      ? "Opponent Turn ($_turnCounter)"
+                      : "Your Turn ($_turnCounter)"),
+              textAlign: TextAlign.center,
+              textScaleFactor: 2,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -163,31 +207,51 @@ class _MyGamePageState extends State<MyGamePage> {
   }
 
   String _showGameOverCredit() {
-    int player = _turnCounter % 2;
-    return "Player $player won!";
+    int won = _turnCounter % 2 == 0 ? 2 : 1;
+    var who = won == 1 ? "X" : "O";
+    return _turnCounter < 10 ? "Player:$won($who) Won!" : "Stalemate!";
   }
 
   void _handleNetworkMessage(data) {
     var res = data.toString().split(":");
     print(res);
+    //prevent duplicate messages
+    if (_lastNetMsg == data.toString()) {
+      return;
+    } else {
+      _lastNetMsg = data.toString();
+    }
+
     switch (res[0]) {
       case "#UN":
+        _resetGame();
         _localPlayer = int.parse(res[1]);
+        if (_localPlayer == 1) {
+          _justPlaced = false;
+        }
         break;
       case "#PI":
         int player = int.parse(res[1]);
         int position = int.parse(res[2]);
         _setBoardPositionTo(position, player, false);
         break;
+      case "#MO":
+        _gameOver = true;
+        _opponentDisconnect = true;
+        Future.delayed(
+          const Duration(seconds: 5),
+          () => widget.net.sendMessage("#RQ"),
+        );
+        break;
     }
   }
 
-  void _advanceTurn() {
-    if (_currentUser == 1) {
-      _currentUser == 2;
-    } else {
-      _currentUser == 1;
-    }
+  void _resetGame() {
+    _gameOver = false;
+    _justPlaced = true;
+    _board.fillRange(0, 9, 0);
+    _turnCounter = 1;
+    _opponentDisconnect = false;
   }
 }
 
