@@ -116,7 +116,7 @@ class _MyGamePageState extends State<MyGamePage> {
       builder: (context, snapshot) {
         _handleNetworkMessage(snapshot.data);
         var gameOverMsg = _opponentDisconnect
-            ? "Opponent disconnected looking for a new one"
+            ? "Opponent disconnected\nLooking for a new one"
             : "Finding a new opponent";
         return Scaffold(
           appBar: AppBar(
