@@ -137,11 +137,11 @@ class _MyGamePageState extends State<MyGamePage> {
                         _gameOver
                             ? "Game Over!\n$gameOverMsg"
                             : "Looking for an opponent!",
-                        textScaleFactor: 4,
+                        textScaleFactor: 3,
                       ),
                       SizedBox(
                         height: screen.height / 2,
-                        width: screen.width * 0.8,
+                        width: screen.width * 0.7,
                         child: const CircularProgressIndicator(
                           strokeWidth: 20,
                           color: Colors.green,
