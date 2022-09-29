@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:test_app/network.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 void main() {
@@ -153,7 +152,7 @@ class _MyGamePageState extends State<MyGamePage> {
                     ],
                   ),
                 )
-              : (kIsWeb ? _webBody(screen) : _mobileBody()),
+              : (_webBody(screen)),
           bottomNavigationBar: BottomAppBar(
             color: Colors.greenAccent,
             child: Text(
@@ -168,23 +167,6 @@ class _MyGamePageState extends State<MyGamePage> {
           ),
         );
       },
-    );
-  }
-
-  Widget _mobileBody() {
-    return GridView.count(
-      padding: const EdgeInsets.only(top: 100),
-      crossAxisCount: 3,
-      children: List.generate(9, (index) {
-        return Center(
-          child: TicTacToeWidget(
-            index: index,
-            ownedBy: _board[index],
-            setPosition: _setBoardPositionTo,
-            clickedBy: _localPlayer,
-          ),
-        );
-      }),
     );
   }
 
@@ -354,7 +336,7 @@ class TicTacToeWidget extends StatelessWidget {
             color: Colors.red,
           ),
           onPressed: null,
-          iconSize: kIsWeb ? 220 : 100,
+          iconSize: 220,
         ),
       );
     } else if (ownedBy == 2) {
@@ -368,7 +350,7 @@ class TicTacToeWidget extends StatelessWidget {
             color: Colors.blue,
           ),
           onPressed: null,
-          iconSize: kIsWeb ? 220 : 100,
+          iconSize: 220,
         ),
       );
     } else {
@@ -380,8 +362,8 @@ class TicTacToeWidget extends StatelessWidget {
           alignment: Alignment.topCenter,
           onPressed: () => setPosition(index, clickedBy, true),
           icon: const Icon(Icons.question_mark_rounded),
-          iconSize: kIsWeb ? 220 : 100,
-          splashRadius: kIsWeb ? 110 : 50,
+          iconSize: 220,
+          splashRadius: 110,
         ),
       );
     }
