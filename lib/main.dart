@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:test_app/network.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -30,8 +31,11 @@ class MyApp extends StatelessWidget {
 }
 
 class MyGamePage extends StatefulWidget {
-  const MyGamePage({Key? key, required this.title, required this.net})
-      : super(key: key);
+  const MyGamePage({
+    Key? key,
+    required this.title,
+    required this.net,
+  }) : super(key: key);
 
   final String title;
   final TicTacToeNetwork net;
@@ -257,12 +261,13 @@ class _MyGamePageState extends State<MyGamePage> {
 }
 
 class TicTacToeWidget extends StatelessWidget {
-  const TicTacToeWidget(
-      {super.key,
-      required this.index,
-      required this.ownedBy,
-      required this.setPosition,
-      this.clickedBy});
+  const TicTacToeWidget({
+    super.key,
+    required this.index,
+    required this.ownedBy,
+    required this.setPosition,
+    this.clickedBy,
+  });
 
   final int ownedBy;
   final int index;
@@ -271,26 +276,114 @@ class TicTacToeWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Border deco;
+    double borderSize = 8;
+    var borderSide = BorderSide(
+      width: borderSize,
+      color: Colors.black,
+    );
+
+    switch (index) {
+      case 0:
+        deco = Border(
+          bottom: borderSide,
+          right: borderSide,
+        );
+        break;
+      case 1:
+        deco = Border(
+          left: borderSide,
+          right: borderSide,
+          bottom: borderSide,
+        );
+        break;
+      case 2:
+        deco = Border(
+          bottom: borderSide,
+          left: borderSide,
+        );
+        break;
+      case 3:
+        deco = Border(
+          top: borderSide,
+          bottom: borderSide,
+          right: borderSide,
+        );
+        break;
+      case 5:
+        deco = Border(
+          top: borderSide,
+          bottom: borderSide,
+          left: borderSide,
+        );
+        break;
+      case 6:
+        deco = Border(
+          top: borderSide,
+          right: borderSide,
+        );
+        break;
+      case 7:
+        deco = Border(
+          top: borderSide,
+          right: borderSide,
+          left: borderSide,
+        );
+        break;
+      case 8:
+        deco = Border(
+          top: borderSide,
+          left: borderSide,
+        );
+        break;
+      default:
+        deco = Border.all(
+          color: Colors.black,
+          width: borderSize,
+        );
+        break;
+    }
+
     if (ownedBy == 1) {
-      return const IconButton(
-        icon: Icon(Icons.close, color: Colors.red),
-        onPressed: null,
-        iconSize: kIsWeb ? 195 : 95,
+      return Container(
+        decoration: BoxDecoration(
+          border: deco,
+        ),
+        child: const IconButton(
+          icon: Icon(
+            Icons.close,
+            color: Colors.red,
+          ),
+          onPressed: null,
+          iconSize: kIsWeb ? 220 : 100,
+        ),
       );
     } else if (ownedBy == 2) {
-      return const IconButton(
-        icon: Icon(
-          Icons.panorama_fish_eye,
-          color: Colors.blue,
+      return Container(
+        decoration: BoxDecoration(
+          border: deco,
         ),
-        onPressed: null,
-        iconSize: kIsWeb ? 185 : 85,
+        child: const IconButton(
+          icon: Icon(
+            Icons.panorama_fish_eye,
+            color: Colors.blue,
+          ),
+          onPressed: null,
+          iconSize: kIsWeb ? 220 : 100,
+        ),
       );
     } else {
-      return IconButton(
-        onPressed: () => setPosition(index, clickedBy, true),
-        icon: const Icon(Icons.edit),
-        iconSize: kIsWeb ? 200 : 100,
+      return Container(
+        decoration: BoxDecoration(
+          border: deco,
+        ),
+        child: IconButton(
+          alignment: Alignment.topCenter,
+          onPressed: () => setPosition(index, clickedBy, true),
+          icon: const Icon(Icons.question_mark_rounded),
+          iconSize: kIsWeb ? 220 : 100,
+          splashRadius: kIsWeb ? 110 : 50,
+        ),
       );
     }
   }
