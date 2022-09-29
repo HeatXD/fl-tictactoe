@@ -95,7 +95,7 @@ class _MyGamePageState extends State<MyGamePage> {
   }
 
   void _checkPlayerWin(int player) {
-    print(_board);
+    //print(_board);
     for (var win in _winLines) {
       if (_board[win[0]] == player &&
           _board[win[1]] == player &&
