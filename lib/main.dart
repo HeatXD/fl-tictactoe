@@ -52,7 +52,7 @@ class _MyGamePageState extends State<MyGamePage> {
     // rows
     [0, 1, 2], [3, 4, 5], [6, 7, 8],
     // columns
-    [0, 3, 6], [1, 4, 7], [2, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
     //diagonals
     [0, 4, 8], [2, 4, 6]
   ];
@@ -83,6 +83,7 @@ class _MyGamePageState extends State<MyGamePage> {
       _checkPlayerWin(player);
       if (!_gameOver) _turnCounter++;
     }
+
     // stalemate
     if (_turnCounter == 10) {
       _gameOver = true;
@@ -94,6 +95,7 @@ class _MyGamePageState extends State<MyGamePage> {
   }
 
   void _checkPlayerWin(int player) {
+    print(_board);
     for (var win in _winLines) {
       if (_board[win[0]] == player &&
           _board[win[1]] == player &&
@@ -214,7 +216,6 @@ class _MyGamePageState extends State<MyGamePage> {
 
   void _handleNetworkMessage(data) {
     var res = data.toString().split(":");
-    print(res);
     //prevent duplicate messages
     if (_lastNetMsg == data.toString()) {
       return;
